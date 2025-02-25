@@ -1,14 +1,10 @@
-import dotenv
 from langchain_community.document_loaders import SitemapLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.vectorstores import FAISS
-from langchain.embeddings import OpenAIEmbeddings
+from langchain_community.vectorstores import FAISS
 from langchain.prompts import ChatPromptTemplate
-from langchain_openai import ChatOpenAI
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_core.runnables import RunnablePassthrough, RunnableLambda
 import streamlit as st
-
-dotenv.load_dotenv(override=True)
 
 llm = None
 
@@ -25,7 +21,7 @@ Score: 5
 Question: How far away is the sun?
 Answer: I don't know.
 Score: 0
-                                                  
+
 Your turn!
                     
 Context: {context}
@@ -101,7 +97,7 @@ def parse_page(soup):
     )
 
 @st.cache_resource(show_spinner="Loading website...")
-def load_website(url):
+def load_website(url, openai_api_key):
     splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
         chunk_size=1000,
         chunk_overlap=200
@@ -120,7 +116,7 @@ def load_website(url):
     )
 
     docs = loader.load_and_split(text_splitter=splitter)
-    vector_store = FAISS.from_documents(docs, OpenAIEmbeddings())
+    vector_store = FAISS.from_documents(docs, OpenAIEmbeddings(api_key=openai_api_key))
     return vector_store.as_retriever()
 
 with st.sidebar:
@@ -134,7 +130,7 @@ if url and openai_api_key:
     else:
         llm = ChatOpenAI(temperature=0.1, api_key=openai_api_key)
 
-        retriever = load_website(url)
+        retriever = load_website(url, openai_api_key)
         query = st.text_input("질문을 입력하세요")
 
         if query:
